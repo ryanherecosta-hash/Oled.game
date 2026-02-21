@@ -11,7 +11,7 @@ int comx[MAX_COM],comy[MAX_COM],vel[MAX_COM];  // depois melhorar esses nomes (g
 int tiroX[MAX_TIROS], tiroY[MAX_TIROS];
 int ptwin = 0,qntVidas =3;
 int naveX = 50, naveY=20, volta=0;
-int frame=0, musga_tiro_estado=1, musga_explosao=1;
+int frame=0, musga_tiro_estado=1, musga_explosao=1; // depois deixar menos analfabeto
 
 bool tiroAtivo[MAX_TIROS], energiAtiva=false;
 bool anim_ativo = true, musga_Atiro = false, musga_explodido = false;

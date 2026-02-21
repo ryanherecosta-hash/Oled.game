@@ -18,7 +18,7 @@
 const byte fase1_qntC=5, fase1_vmin=2, fase1_vmax=4;
 const int centroX = 1730, centroY = 1772;
 
-class Btn {
+class Btn { // a melhorar
   public:
   int pino, btnclick, btnsubida;
   Btn(int p) {
