@@ -1,30 +1,27 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include "coisasQueQueroEsconder.h" // depois trocar nome
+#include <coisasQueQueroEsconder.h>
 
 byte fase = 1,eneloss = 1,energia = 100;
-byte qntC=5, vmin=2, vmax=4, fmusga=1; // C = cometa
+byte qntC=0, vmin=2, vmax=2, fmusga=1; // C = cometa
+byte qntCG=2, vminG=2, vmaxG=2; // G = cometa grande
 
 int batX = 200, batY;
 int comx[MAX_COM],comy[MAX_COM],vel[MAX_COM];  // depois melhorar esses nomes (geral)
+int comGX[MAX_COM],comGY[MAX_COM],velG[MAX_COM], hpG[MAX_COM];  // depois melhorar esses nomes (geral)
 int tiroX[MAX_TIROS], tiroY[MAX_TIROS];
-int ptwin = 0,qntVidas =3;
+int ptwin = 0,qntVidas =5;
 int naveX = 50, naveY=20, volta=0;
 int frame=0, musga_tiro_estado=1, musga_explosao=1; // depois deixar menos analfabeto
+int qtdcom_ant = -1, velMax_ant = -1, velMin_ant = -1;
+int qtdcom_antG = -1, velMax_antG = -1, velMin_antG = -1;
+
 
 bool tiroAtivo[MAX_TIROS], energiAtiva=false;
 bool anim_ativo = true, musga_Atiro = false, musga_explodido = false;
 
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Btn butao(BTN);
-Timer timer;
-Timer t_energia;
-Timer musga_tiro;
-Timer musga_inicio;
-Timer musga_boom;
-Timer animation;
-Timer cd;
 
 int spawnY() {
   return random(0, LIMIT_Y - TAM_OBJ);
@@ -32,6 +29,10 @@ int spawnY() {
 
 int spawnX() {
   return random(MIN_COM_RESP, MAX_COM_RESP); 
+  }
+
+int spawnGY() {
+  return random(-8, LIMIT_Y - TAM_OBJG);
   }
 
 int filtrarADC(int pin) {
@@ -50,8 +51,10 @@ void setup() {
   pinMode(JY, INPUT);
   pinMode(SPK, OUTPUT);
 
-  for(int x=0;x<20;x++){
+  for(int x=0;x<MAX_COM;x++){
     comx[x] = comy[x] = vel[x] = 400;
+    comGX[x] = comGY[x] = velG[x] = 400;
+    hpG[x] = 3;
   }
 
   if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
@@ -70,7 +73,7 @@ void setup() {
   delay(4000);
   randomSeed(analogRead(0)); 
   comeco();
-  qntVidas=3;
+  qntVidas=5;
   }
 
 
@@ -93,12 +96,13 @@ void comeco(){
   }
 
 void loop() {
-  Serial.println(qntVidas);
   oled.clearDisplay();
   mostraNave();
+  fases_cond();
   disparo();
   musga_disparo();
   cometas(qntC, vmin, vmax);
+  cometasGrandes(qntCG, vminG, vmaxG);
   spawn_energia();
   colisao();
   musga_explosao_com();
@@ -113,7 +117,6 @@ void loop() {
     final_bom();
     mostrar_pontucao();
   }
-  fases_cond();
   oled.display();
   }
 
@@ -140,10 +143,6 @@ void mostraNave(){
   }
 
 void cometas(byte qtd_com, byte velMin, byte velMax){
-  static int qtdcom_ant = -1;
-  static int velMin_ant = -1;
-  static int velMax_ant = -1;
-
   if(qtdcom_ant != qtd_com || velMin_ant != velMin || velMax_ant != velMax){
     for (int i = 0; i < qtd_com; i++) {
     if (comx[i] == 400){
@@ -174,6 +173,35 @@ void cometas(byte qtd_com, byte velMin, byte velMax){
   }
   }
 
+void cometasGrandes(byte qtd_comG, byte velMinG, byte velMaxG){
+  if(qtdcom_antG != qtd_comG || velMin_antG != velMinG || velMax_antG != velMaxG){
+    for (int i = 0; i < qtd_comG; i++) {
+    if (comGX[i] == 400){
+    comGX[i] = spawnX();
+    }
+    if (comGY[i] == 400){
+    comGY[i] = spawnGY();
+    }
+    velG[i]  = random(velMinG, velMaxG+1);     
+  }
+  qtdcom_antG = qtd_comG;
+  velMin_antG = velMinG;
+  velMax_antG = velMaxG;
+  }
+  
+  for (int i = 0; i < qtd_comG; i++) {
+    comGX[i] -= velG[i]; 
+
+    if (comGX[i] < -15) { 
+      comGX[i] = spawnX();
+      comGY[i] = spawnGY();
+      velG[i]  = random(velMinG, velMaxG+1);
+      hpG[i] = 3;
+    } 
+  }
+  }
+
+
 void disparo(){
   if (butao.press()){
     musga_Atiro = true;
@@ -183,7 +211,6 @@ void disparo(){
         tiroX[a] = naveX + 6;
         tiroY[a] = naveY;
         tiroAtivo[a] = true;
-        energia -= 0.5;
         break;
        }
       }
@@ -191,9 +218,11 @@ void disparo(){
   }
 
 void colisao(){
+  // colisao cometas
   for(int i=0;i<MAX_TIROS;i++){
     if(tiroAtivo[i]){
-      for(int a=0;a<MAX_COM;a++){
+
+      for(int a=0;a<qntC;a++){
         if((tiroX[i]+8 >= comx[a] && tiroX[i] < comx[a]+8)
          && ((tiroY[i] < comy[a]+8) && (tiroY[i]+8 > comy[a])) ){ // funciona e o + é pra deixar mais ez
           tiroAtivo[i] = false;
@@ -206,7 +235,25 @@ void colisao(){
           break;
         }
       }
+
+      for(int a=0;a<qntCG;a++){
+        if((tiroX[i]+8 >= comGX[a] && tiroX[i] < comGX[a]+16)
+         && ((tiroY[i] < comGY[a]+16) && (tiroY[i]+8 > comGY[a])) ){ // funciona e o + é pra deixar mais ez
+          tiroAtivo[i] = false;
+          hpG[a]--;
+          if(hpG[a] <= 0){
+            oled.drawBitmap(comGX[a], comGY[a], explosaoG, 16,16, SSD1306_WHITE);
+            comGX[a] = spawnX();
+            comGY[a] = spawnGY();
+            ptwin += random(40, 181);
+            musga_explodido = true;
+            musga_boom.reset();
+            hpG[a] = 3;
+          }
+          break;
+      }
     }
+  }
   } // colisao nave
   for (int c=0;c<qntC;c++){
     if((naveX+7 >= comx[c] && naveX <= comx[c]+8) && (comy[c]+7 >= naveY && comy[c] <= naveY+7)) {
@@ -215,7 +262,18 @@ void colisao(){
       comy[c] = spawnY();
       break;
     }
-  } // colisao energia 
+  }
+  for (int c=0;c<qntCG;c++){
+    if((naveX+7 >= comGX[c] && naveX <= comGX[c]+15) && (comGY[c]+15 >= naveY && comGY[c] <= naveY+7)) {
+      qntVidas--;
+      hpG[c]--;
+      comGX[c] = spawnX();
+      comGY[c] = spawnGY();
+      break;
+    }
+  }
+  
+   // colisao energia 
   if(energiAtiva && (batX <= naveX+8 && batX >= naveX) && (batY+8 >= naveY  &&  batY <= naveY +8) ){ // feio mas funcional, adaptarei dps para mov livre de x e y
     energiAtiva = false;
     batX = 200;
@@ -228,6 +286,13 @@ void renderCometa(){
   for(int i=0; i<qntC;i++){
   oled.drawBitmap(comx[i], comy[i], cometa, 8, 8, SSD1306_WHITE);
   }
+
+  for(int i=0; i<qntCG;i++){
+    if(hpG[i] >= 3) oled.drawBitmap(comGX[i], comGY[i], cometaG0, 16, 16, SSD1306_WHITE);
+    else if(hpG[i] == 2) oled.drawBitmap(comGX[i], comGY[i], cometaG1, 16, 16, SSD1306_WHITE);
+    else if(hpG[i] == 1) oled.drawBitmap(comGX[i], comGY[i], cometaG2, 16, 16, SSD1306_WHITE);
+  }
+
   }
 
 void renderTiro(){
@@ -319,57 +384,56 @@ void fases_cond(){
   if(fase == 1 && ptwin >= 500){
     fase++;
 
-    vmin++;
+    vmaxG++;
     subirFase();
    }
   else if(fase == 2 && ptwin >= 1000){
     fase++;
 
-    qntC++;
+    qntC+=3;
     subirFase();
    }
   else if(fase == 3 && ptwin >= 1500){
     fase++;
-
-    vmax++;
     qntC++;
+    vmax++;
+    qntCG--;
     subirFase();
   }
   else if(fase == 4 && ptwin >= 2000){
     fase++;
-
-    qntC++;
+    qntC+=2;
+    vmin++;
+    qntCG--;
     subirFase();
   }
   else if(fase == 5 && ptwin >= 2800){
    fase++;
-   vmax++;
-   qntC++;
+   qntC+=2;
    subirFase();
   }
     else if(fase == 6 && ptwin >= 3700){
    fase++;
-
-   qntC++;
+   qntC+=2;
    subirFase();
   }
     else if(fase == 7 && ptwin >= 4700){
    fase++;
-
+   qntCG++;
+   vmaxG++;
    subirFase();
   }
     else if(fase == 8 && ptwin >= 6000){
    fase++;
-  
-   vmax++;
-   qntC++;
+   qntCG++;
+   qntC+=2;
    subirFase();
   }
     else if(fase == 9 && ptwin >= 7777){
    fase=67;
-   vmax++;
-   vmin++;
-   qntC+=2;
+   qntCG++;
+   vminG++;
+   qntC+=5;
    subirFase();
   }
   }
@@ -383,13 +447,19 @@ void subirFase() {
   energia = 100;
 
   if(qntC > MAX_COM) qntC = MAX_COM;
+  if(qntCG > MAX_COM) qntCG = MAX_COM;
+
 
   for (int i = 0; i < qntC; i++) {
     comx[i] = spawnX();
     comy[i] = spawnY();
     vel[i]  = random(vmin, vmax);
   }
-
+  for (int i = 0; i < qntCG; i++) {
+    comGX[i] = spawnX();
+    comGY[i] = spawnGY();
+    velG[i]  = random(vmin, vmax);
+  }
 
  }
 
