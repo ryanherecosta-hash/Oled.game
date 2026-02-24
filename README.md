@@ -1,6 +1,5 @@
 # Retro OLED Game - ESP32
 
-<<<<<<< HEAD
 A retro-style arcade game built with **ESP32**, featuring a 0.96" OLED display and physical controller inputs.
 
 > [!IMPORTANT]  
@@ -66,25 +65,3 @@ I am using the following legend to track progress:
 ---
 Developed by [JaPode] <3
 =======
-codigo para jogo em oled retro usando esp32
-código ainda em progresso espero adicionar as seguintes mecânicas:
-❌ ainda não imolementado
-⚠️ WIP (pode estar no jogo e ser melhorado)
-✅ Já no jogo
-Power ups ❌
-munição limitada ❌
-fases ⚠️
-animações efeitos sonoros⚠️
-colisão ✅
-Bosses❌
-multiplayer local ❌
-tiros diferentes ❌
-
-componentes necessarios:
-esp32
-oled i2c 0'96
-joystick
-botao tactil
-buzzer passivo
-jumpers
->>>>>>> 8d159e42bbb0df81393bd7181b5e7d2d79047cb0
