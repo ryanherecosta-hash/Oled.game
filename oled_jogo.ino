@@ -5,13 +5,13 @@
 
 byte fase = 1,eneloss = 1,energia = 100;
 byte qntC=0, vmin=2, vmax=2, fmusga=1; // C = cometa
-byte qntCG=2, vminG=2, vmaxG=2; // G = cometa grande
+byte qntCG=3, vminG=2, vmaxG=2; // G = cometa grande
 
 int batX = 200, batY;
 int comx[MAX_COM],comy[MAX_COM],vel[MAX_COM];  // depois melhorar esses nomes (geral)
 int comGX[MAX_COM],comGY[MAX_COM],velG[MAX_COM], hpG[MAX_COM];  // depois melhorar esses nomes (geral)
 int tiroX[MAX_TIROS], tiroY[MAX_TIROS];
-int ptwin = 0,qntVidas =5;
+int ptwin = 0,qntVidas =3, qntTiros=30;
 int naveX = 50, naveY=20, volta=0;
 int frame=0, musga_tiro_estado=1, musga_explosao=1; // depois deixar menos analfabeto
 int qtdcom_ant = -1, velMax_ant = -1, velMin_ant = -1;
@@ -68,12 +68,11 @@ void setup() {
   oled.println("Ryan Acosta Heredia");
   oled.println("2 ano ETEHL");
   oled.println("ultima att feita em:");
-  oled.println("08/02/26 21:30");
+  oled.println("24/02/26 00:15 ");
   oled.display();
   delay(4000);
   randomSeed(analogRead(0)); 
   comeco();
-  qntVidas=5;
   }
 
 
@@ -108,6 +107,7 @@ void loop() {
   musga_explosao_com();
   renderCometa();
   renderTiro();
+  perdasTotais();
   painel();
   if(qntVidas <= 0 || energia <= 0){
     final_ruim();
@@ -203,7 +203,7 @@ void cometasGrandes(byte qtd_comG, byte velMinG, byte velMaxG){
 
 
 void disparo(){
-  if (butao.press()){
+  if (butao.press() && qntTiros > 0){
     musga_Atiro = true;
     musga_tiro.reset();
     for(int a =0;a<MAX_TIROS;a++){
@@ -211,6 +211,7 @@ void disparo(){
         tiroX[a] = naveX + 6;
         tiroY[a] = naveY;
         tiroAtivo[a] = true;
+        qntTiros-=1;
         break;
        }
       }
@@ -319,12 +320,11 @@ void painel(){
   oled.drawBitmap(0, 57, vida, 8, 8, SSD1306_WHITE);
   gprint(9,57,qntVidas);
   oled.drawBitmap(20, 57, bateria_painel, 8,8, SSD1306_WHITE);
-  perda_energia();
   gprint(26,57,int(energia));
   oled.drawBitmap(41, 57, pontos, 8, 8, SSD1306_WHITE); 
   gprint(48,57,ptwin);
   oled.drawBitmap(80, 57, cometa_display, 8,8, SSD1306_WHITE);
-  gprint(88,57,qntC);
+  gprint(88,57,qntTiros); // testes
   oled.drawBitmap(102, 57, sp_i, 16,16, SSD1306_WHITE);
   gprint(114,57,fase);
   } 
@@ -353,10 +353,9 @@ void final_ruim(){
   }
   }
 
-void perda_energia(){
-    if(t_energia.tempo(300) ){
-    energia -= eneloss;
-    }
+void perdasTotais(){
+    if(t_energia.tempo(250) ) energia -= eneloss;
+    if(municao.tempo(1000)) qntTiros++;
  }
 
 void spawn_energia() {
@@ -381,60 +380,76 @@ void spawn_energia() {
  }
 
 void fases_cond(){
+  if(fase == 1){
+    qntC=0; vmin=2; vmax=2; fmusga=1;
+    qntCG=3; vminG=2; vmaxG=2; // G = cometa grande
+  }
   if(fase == 1 && ptwin >= 500){
     fase++;
 
-    vmaxG++;
+    vmaxG++; // 3>4
     subirFase();
+    mensagem_subirFase("FASE 2:", "+ vel max  com grande", "", "", "");
    }
   else if(fase == 2 && ptwin >= 1000){
     fase++;
 
-    qntC+=3;
+    qntC+=3; // 0>3
     subirFase();
+    mensagem_subirFase("FASE 3:", "+3 com pequenos", "", "", "");
    }
   else if(fase == 3 && ptwin >= 1500){
     fase++;
-    qntC++;
-    vmax++;
-    qntCG--;
+    qntC++; //3>4
+    vmax++; //2>3
+    qntCG--; //3>2
     subirFase();
+    mensagem_subirFase("FASE 4:", "+ com pequeno", "+ vel com pequeno", "- com grande", "");
   }
   else if(fase == 4 && ptwin >= 2000){
     fase++;
-    qntC+=2;
-    vmin++;
-    qntCG--;
+    qntC+=2; // 4>6
+    vmin++; //2>3
+    qntCG-=2; //2>0
     subirFase();
+    mensagem_subirFase("FASE 5:", "+2 com pequeno", "+ vel min com pequeno", "- com grande", "");
   }
   else if(fase == 5 && ptwin >= 2800){
-   fase++;
-   qntC+=2;
-   subirFase();
+    fase++;
+    qntC+=2; //6>8
+    subirFase();
+    mensagem_subirFase("FASE 6:", "+2 com pequeno", "", "", "");
+
   }
     else if(fase == 6 && ptwin >= 3700){
-   fase++;
-   qntC+=2;
-   subirFase();
+    fase++;
+    qntC+=3; //8>10
+    subirFase();
+    mensagem_subirFase("FASE 7:", "+3 com pequeno", "", "", "");
   }
     else if(fase == 7 && ptwin >= 4700){
-   fase++;
-   qntCG++;
-   vmaxG++;
-   subirFase();
+    fase++;
+    qntCG++; //0>1
+    vmaxG++; //3>4
+    subirFase();
+    mensagem_subirFase("FASE 8:", "+ com grande", "+ vel max com grande", "", "");
   }
     else if(fase == 8 && ptwin >= 6000){
-   fase++;
-   qntCG++;
-   qntC+=2;
-   subirFase();
+    fase++;
+    qntCG++; //0>2
+    qntC+=2; //11>13
+    subirFase();
+    mensagem_subirFase("FASE 9:", "+2 com pequeno", "+ com grande", "", "");
   }
     else if(fase == 9 && ptwin >= 7777){
-   fase=67;
-   qntCG++;
-   vminG++;
-   qntC+=5;
-   subirFase();
+    fase=67;
+    qntCG++; //2>3
+    vminG++; //2>3
+    qntC+=5; //13>18
+    vmax++; // 3>4
+    subirFase();
+    mensagem_subirFase("FASE 67:", "+5 com pequeno", "+ vel max com pequeno", "+ com grande", "+ vel min com grande");
+
   }
   }
 
@@ -444,7 +459,8 @@ void subirFase() {
   batX = 128; // bom ne
   batY = spawnY();
   energiAtiva = false;
-  energia = 100;
+  energia += 30;
+  qntTiros += random(0, 20);
 
   if(qntC > MAX_COM) qntC = MAX_COM;
   if(qntCG > MAX_COM) qntCG = MAX_COM;
@@ -511,13 +527,14 @@ void mostrar_pontucao(){
    }
   volta=0;
   qntVidas=3;
-  energia=100;
   fase = 1;
   ptwin = 0;
   qntC = fase1_qntC;
   vmin = fase1_vmin;
   vmax = fase1_vmax;
   frame=0;
+  qntTiros = 30;
+  energia = 100;
 
   for(int i=0;i<MAX_COM;i++){
   comx[i] = spawnX();
@@ -594,4 +611,19 @@ void musga_explosao_com() {
       break;        
     }
   }
+  }
+
+void mensagem_subirFase(String mensagem, String m1, String m2, String m3, String m4) {
+  oled.clearDisplay();
+  oled.setTextSize(2);
+  oled.setCursor(0,0);
+  oled.println(mensagem);
+  oled.setTextSize(1);
+  oled.println(m1);
+  oled.println(m2);
+  oled.println(m3);
+  oled.println(m4);
+  oled.display();
+  delay(300); // mata ninguem
+  while(!(butao.press()) );
 }
