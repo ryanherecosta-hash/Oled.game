@@ -8,18 +8,14 @@ byte qntComet8=0, velMin=2, velMax=2; // C = cometa
 byte qntComet16=3, velMin16=2, velMax16=2; // G = cometa grande
 
 int bateryX = 200, bateryY;
-int comX8[MAX_COM],comY8[MAX_COM],comVel8[MAX_COM];  // depois transformar em struct
-int comX16[MAX_COM],comY16[MAX_COM],comVel16[MAX_COM], comHp16[MAX_COM]; 
-int tiroX[MAX_TIROS], tiroY[MAX_TIROS];
 int points = 0,totalHP =3, shoots=30;
 int naveX = 50, naveY=20, qntLoop=0;
 int frame=0, soundShootState=1, soundExplosion=1; 
 int qtdcom_ant = -1, velMax_ant = -1, velMin_ant = -1;
 int qtdcom_antG = -1, velMax_antG = -1, velMin_antG = -1;
 
-
-bool tiroAtivo[MAX_TIROS], energyOnOff=false;
-bool animationOnOff = true, soundShoot = false, soundExplosionState = false;
+bool energyOnOff=false;
+bool animationOnOff = true;
 
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -52,9 +48,8 @@ void setup() {
   pinMode(SPK, OUTPUT);
 
   for(int x=0;x<MAX_COM;x++){
-    comX8[x] = comY8[x] = comVel8[x] = 400;
-    comX16[x] = comY16[x] = comVel16[x] = 400;
-    comHp16[x] = 3;
+    bigComet[x].defineHp(3);
+    smallComet[x].defineHp(0);
   }
 
   if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
@@ -77,9 +72,9 @@ void setup() {
 
 
 void comeco(){ 
-  timer.reset();
+  timer.global.reset();
   while(!butao.press() ){
-    if (timer.tempo(500)){
+    if (timer.global.tempo(500)){
       oled.clearDisplay();
       oled.drawBitmap(0,0, start, 128,64, SSD1306_WHITE);
       qntLoop++;
@@ -99,12 +94,12 @@ void loop() {
   mostraNave();
   fases_cond();
   disparo();
-  musga_disparo();
+  sound_shoot();
   cometas(qntComet8, velMin, velMax);
   cometasGrandes(qntComet16, velMin16, velMax16);
   spawn_energia();
   colisao();
-  musga_explosao_com();
+  sound_explosion();
   renderCometa();
   renderTiro();
   perdasTotais();
@@ -145,13 +140,11 @@ void mostraNave(){
 void cometas(byte qtd_com, byte velMin, byte velMax){
   if(qtdcom_ant != qtd_com || velMin_ant != velMin || velMax_ant != velMax){
     for (int i = 0; i < qtd_com; i++) {
-    if (comX8[i] == 400){
-    comX8[i] = spawnX();
-    }
-    if (comY8[i] == 400){
-    comY8[i] = spawnY();
-    }
-    comVel8[i]  = random(velMin, velMax+1);     
+    if (smallComet[i].x == 500 || smallComet[i].y == 500){
+    smallComet[i].x = spawnX();
+    smallComet[i].y = spawnY();
+    smallComet[i].vel = random(velMin, velMax+1); 
+    }    
   }
   qtdcom_ant = qtd_com;
   velMin_ant = velMin;
@@ -159,15 +152,15 @@ void cometas(byte qtd_com, byte velMin, byte velMax){
   }
   
   for (int i = 0; i < qtd_com; i++) {
-    comX8[i] -= comVel8[i]; 
+    smallComet[i].x -= smallComet[i].vel; 
 
-    if (comX8[i] < -8) { 
-      comX8[i] = spawnX();
-      comY8[i] = spawnY();
-      comVel8[i]  = random(velMin, velMax+1);
+    if (smallComet[i].x < -8) { 
+      smallComet[i].x = spawnX();
+      smallComet[i].y = spawnY();
+      smallComet[i].vel  = random(velMin, velMax+1);
       int a = random(0, 1001);
       if (a >= 1000){
-        comVel8[i] = velMax + 5;
+        smallComet[i].vel = velMax + 5;
       }
     } 
   }
@@ -176,13 +169,11 @@ void cometas(byte qtd_com, byte velMin, byte velMax){
 void cometasGrandes(byte qtd_comG, byte velMinG, byte velMaxG){
   if(qtdcom_antG != qtd_comG || velMin_antG != velMinG || velMax_antG != velMaxG){
     for (int i = 0; i < qtd_comG; i++) {
-    if (comX16[i] == 400){
-    comX16[i] = spawnX();
-    }
-    if (comY16[i] == 400){
-    comY16[i] = spawnGY();
-    }
-    comVel16[i]  = random(velMinG, velMaxG+1);     
+    if (bigComet[i].x == 500 || bigComet[i].y == 500){
+    bigComet[i].x = spawnX();
+    bigComet[i].y = spawnY();
+    bigComet[i].vel = random(velMin, velMax+1); 
+    }    
   }
   qtdcom_antG = qtd_comG;
   velMin_antG = velMinG;
@@ -190,27 +181,29 @@ void cometasGrandes(byte qtd_comG, byte velMinG, byte velMaxG){
   }
   
   for (int i = 0; i < qtd_comG; i++) {
-    comX16[i] -= comVel16[i]; 
+    bigComet[i].x -= bigComet[i].vel; 
 
-    if (comX16[i] < -15) { 
-      comX16[i] = spawnX();
-      comY16[i] = spawnGY();
-      comVel16[i]  = random(velMinG, velMaxG+1);
-      comHp16[i] = 3;
+    if (bigComet[i].x < -16) { 
+      bigComet[i].x = spawnX();
+      bigComet[i].y = spawnY();
+      bigComet[i].vel  = random(velMin, velMax+1);
+      int a = random(0, 1001);
+      if (a >= 1000){
+        bigComet[i].vel = velMax + 5;
+      }
     } 
   }
   }
 
-
 void disparo(){
   if (butao.press() && shoots > 0){
-    soundShoot = true;
-    musga_tiro.reset();
+    soundShoot.canPlay = true;
+    timer.shootSound.reset();
     for(int a =0;a<MAX_TIROS;a++){
-      if (!tiroAtivo[a]){
-        tiroX[a] = naveX + 6;
-        tiroY[a] = naveY;
-        tiroAtivo[a] = true;
+      if (!shoot[a].hasShoot){
+        shoot[a].x = naveX + 6;
+        shoot[a].y = naveY;
+        shoot[a].hasShoot = true;
         shoots-=1;
         break;
        }
@@ -221,35 +214,39 @@ void disparo(){
 void colisao(){
   // colisao cometas
   for(int i=0;i<MAX_TIROS;i++){
-    if(tiroAtivo[i]){
+    if(shoot[i].hasShoot){
 
       for(int a=0;a<qntComet8;a++){
-        if((tiroX[i]+8 >= comX8[a] && tiroX[i] < comX8[a]+8)
-         && ((tiroY[i] < comY8[a]+8) && (tiroY[i]+8 > comY8[a])) ){ // funciona e o + é pra deixar mais ez
-          tiroAtivo[i] = false;
-          oled.drawBitmap(comX8[a], comY8[a], explosao, 8, 8, SSD1306_WHITE);
-          comX8[a] = spawnX();
-          comY8[a] = spawnY();
-          points += random(40, 81);
-          soundExplosionState = true;
-          musga_boom.reset();
+        if((shoot[i].x +8 >= smallComet[a].x && shoot[i].x < smallComet[a].x +8)
+         && ((shoot[i].y < smallComet[a].y +8) && (shoot[i].y +8 > smallComet[a].y)) ){ // funciona e o + é pra deixar mais ez
+          shoot[i].hasShoot = false;
+          smallComet[a].hp--;
+          if(smallComet[a].hp <= 0){ //inutil mas legal se crescer
+            oled.drawBitmap(smallComet[a].x, smallComet[a].y, explosao, 8, 8, SSD1306_WHITE);
+            smallComet[a].x = spawnX();
+            smallComet[a].y = spawnGY();
+            points += random(40, 60);
+            explosionSound.canPlay = true;
+            timer.explosionSound.reset();
+            smallComet[a].hp = 1;
+          }
           break;
         }
       }
 
       for(int a=0;a<qntComet16;a++){
-        if((tiroX[i]+8 >= comX16[a] && tiroX[i] < comX16[a]+16)
-         && ((tiroY[i] < comY16[a]+16) && (tiroY[i]+8 > comY16[a])) ){ // funciona e o + é pra deixar mais ez
-          tiroAtivo[i] = false;
-          comHp16[a]--;
-          if(comHp16[a] <= 0){
-            oled.drawBitmap(comX16[a], comY16[a], explosaoG, 16,16, SSD1306_WHITE);
-            comX16[a] = spawnX();
-            comY16[a] = spawnGY();
+        if((shoot[i].x +8 >= bigComet[a].x && shoot[i].x < bigComet[a].x +16)
+         && ((shoot[i].y < bigComet[a].y +16) && (shoot[i].y +8 > bigComet[a].y )) ){ // funciona e o + é pra deixar mais ez
+          shoot[i].hasShoot = false;
+          bigComet[a].hp--;
+          if(bigComet[a].hp <= 0){
+            oled.drawBitmap(bigComet[a].x, bigComet[a].y, explosaoG, 16,16, SSD1306_WHITE);
+            bigComet[a].x = spawnX();
+            bigComet[a].y = spawnGY();
             points += random(40, 181);
-            soundExplosionState = true;
-            musga_boom.reset();
-            comHp16[a] = 3;
+            explosionSound.canPlay = true;
+            timer.explosionSound.reset();
+            bigComet[a].hp = 3;
           }
           break;
       }
@@ -257,25 +254,26 @@ void colisao(){
   }
   } // colisao nave
   for (int c=0;c<qntComet8;c++){
-    if((naveX+7 >= comX8[c] && naveX <= comX8[c]+8) && (comY8[c]+7 >= naveY && comY8[c] <= naveY+7)) {
+    if((naveX+7 >= smallComet[c].x && naveX <= smallComet[c].x +8) && (smallComet[c].y +7 >= naveY && smallComet[c].y <= naveY+7)){
       totalHP--;
-      comX8[c] = spawnX();
-      comY8[c] = spawnY();
+      smallComet[c].hp--;
+      smallComet[c].x = spawnX();
+      smallComet[c].y = spawnY();
       break;
     }
   }
   for (int c=0;c<qntComet16;c++){
-    if((naveX+7 >= comX16[c] && naveX <= comX16[c]+15) && (comY16[c]+15 >= naveY && comY16[c] <= naveY+7)) {
+    if((naveX+7 >= bigComet[c].x && naveX <= bigComet[c].x +15) && (bigComet[c].y +15 >= naveY && bigComet[c].y <= naveY+7)) {
       totalHP--;
-      comHp16[c]--;
-      comX16[c] = spawnX();
-      comY16[c] = spawnGY();
+      bigComet[c].hp--;
+      bigComet[c].x = spawnX();
+      bigComet[c].y = spawnGY();
       break;
     }
   }
   
    // colisao energia 
-  if(energyOnOff && (bateryX <= naveX+8 && bateryX >= naveX) && (bateryY+8 >= naveY  &&  bateryY <= naveY +8) ){ // feio mas funcional, adaptarei dps para mov livre de x e y
+  if(energyOnOff && (bateryX <= naveX+8 && bateryX >= naveX) && (bateryY+8 >= naveY  &&  bateryY <= naveY +8) ){
     energyOnOff = false;
     bateryX = 200;
     energy = 100;
@@ -285,24 +283,24 @@ void colisao(){
 void renderCometa(){
 
   for(int i=0; i<qntComet8;i++){
-  oled.drawBitmap(comX8[i], comY8[i], cometa, 8, 8, SSD1306_WHITE);
+  oled.drawBitmap(smallComet[i].x, smallComet[i].y, cometa, 8, 8, SSD1306_WHITE);
   }
 
   for(int i=0; i<qntComet16;i++){
-    if(comHp16[i] >= 3) oled.drawBitmap(comX16[i], comY16[i], cometaG0, 16, 16, SSD1306_WHITE);
-    else if(comHp16[i] == 2) oled.drawBitmap(comX16[i], comY16[i], cometaG1, 16, 16, SSD1306_WHITE);
-    else if(comHp16[i] == 1) oled.drawBitmap(comX16[i], comY16[i], cometaG2, 16, 16, SSD1306_WHITE);
+    if(bigComet[i].hp >= 3) oled.drawBitmap(bigComet[i].x, bigComet[i].y, cometaG0, 16, 16, SSD1306_WHITE);
+    else if(bigComet[i].hp == 2) oled.drawBitmap(bigComet[i].x, bigComet[i].y, cometaG1, 16, 16, SSD1306_WHITE);
+    else if(bigComet[i].hp <= 1) oled.drawBitmap(bigComet[i].x, bigComet[i].y, cometaG2, 16, 16, SSD1306_WHITE);
   }
 
   }
 
 void renderTiro(){
   for(int i=0;i<MAX_TIROS;i++){
-    if(tiroAtivo[i]){
-      oled.drawBitmap(tiroX[i], tiroY[i], tiro, 8, 8, SSD1306_WHITE);
-      tiroX[i] += 5;
-      if(tiroX[i] > 128){
-        tiroAtivo[i] = false;
+    if(shoot[i].hasShoot){
+      oled.drawBitmap(shoot[i].x, shoot[i].y, tiro, 8, 8, SSD1306_WHITE);
+      shoot[i].x += 5;
+      if(shoot[i].x > 128){
+        shoot[i].hasShoot = false;
          }
         }
       }
@@ -335,7 +333,7 @@ void final_ruim(){
     oled.display();
     animationOnOff = true;
     delay(500); // evita skip sem querer
-    timer.reset();
+    timer.global.reset();
 
     while(!butao.press() ) {
     animacao_final_ruim(70); // menor = mais rapido
@@ -346,7 +344,7 @@ void final_ruim(){
     oled.drawBitmap(0,0, fim_ruim[0], 128,64, SSD1306_WHITE);
     oled.display();
 
-    if (cd.tempo(2500)){
+    if (timer.cooldawn.tempo(2500)){
       animationOnOff = true;
     }
     }
@@ -354,12 +352,12 @@ void final_ruim(){
   }
 
 void perdasTotais(){
-    if(t_energia.tempo(250) ) energy -= energy_loss;
-    if(municao.tempo(1000)) shoots++;
+    if(timer.energy.tempo(250) ) energy -= energy_loss;
+    if(timer.ammo.tempo(1000)) shoots++;
  }
 
 void spawn_energia() {
-  if(timer.tempo(1000) ) {
+  if(timer.global.tempo(1000) ) {
     int spawnrateEne = random(0, 100);
     if (spawnrateEne >= 87){ // 13% spawnrate / s
       if(!energyOnOff){
@@ -455,7 +453,7 @@ void fases_cond(){
 
 
 void subirFase() {
-  timer.reset();
+  timer.global.reset();
   bateryX = 128; // bom ne
   bateryY = spawnY();
   energyOnOff = false;
@@ -467,14 +465,14 @@ void subirFase() {
 
 
   for (int i = 0; i < qntComet8; i++) {
-    comX8[i] = spawnX();
-    comY8[i] = spawnY();
-    comVel8[i]  = random(velMin, velMax);
+    smallComet[i].x = spawnX();
+    smallComet[i].y = spawnY();
+    smallComet[i].vel  = random(velMin, velMax);
   }
   for (int i = 0; i < qntComet16; i++) {
-    comX16[i] = spawnX();
-    comY16[i] = spawnGY();
-    comVel16[i]  = random(velMin, velMax);
+    bigComet[i].x = spawnX();
+    bigComet[i].y = spawnGY();
+    bigComet[i].vel  = random(velMin, velMax);
   }
 
  }
@@ -485,7 +483,7 @@ void final_bom() {
   oled.display();
   delay(500); // evita skip sem querer
   while(!(butao.press() ) ) {
-  if (timer.tempo(500) ){
+  if (timer.global.tempo(500) ){
   oled.clearDisplay();
   oled.drawBitmap(0,0, tela_win, 128,64, SSD1306_WHITE);
   oled.display();
@@ -496,7 +494,7 @@ void final_bom() {
 
 void animacao_final_ruim(int vel){
   if(animationOnOff){
-  if(animation.tempo(vel) ) {
+  if(timer.animation.tempo(vel) ) {
   oled.clearDisplay();
   oled.drawBitmap(0,0, fim_ruim[frame], 128,64, SSD1306_WHITE);
   oled.display();
@@ -516,9 +514,9 @@ void mostrar_pontucao(){
     gprint(45, 30, a);
     oled.display();
   }
-  timer.reset();
+  timer.global.reset();
    while(!butao.press() ) {
-   if(timer.tempo(90000)){
+   if(timer.global.tempo(90000)){
     oled.setCursor(0,0);
     oled.clearDisplay();
     oled.print("pabens axoeaster egg");
@@ -537,76 +535,76 @@ void mostrar_pontucao(){
   energy = 100;
 
   for(int i=0;i<MAX_COM;i++){
-  comX8[i] = spawnX();
-  comY8[i] = spawnY();
+  smallComet[i].x = smallComet[i].y = 500;
+  bigComet[i].x = bigComet[i].y = 500;
   }
   oled.setTextSize(1);
   }
 
-void musga_disparo(){
-  if(soundShoot){
-    switch (soundShootState) {
+void sound_shoot(){
+  if(soundShoot.canPlay){
+    switch (soundShoot.state) {
     case 1:
       tone(SPK, 1800, 30);
-      soundShootState++;
+      soundShoot.state++;
       break;
     case 2:
-      if(musga_tiro.tempo(35)){
+      if(timer.shootSound.tempo(35)){
         tone(SPK, 1500, 25);
-        soundShootState++;
+        soundShoot.state++;
       } 
       break;
     case 3:
-      if(musga_tiro.tempo(30)){
+      if(timer.shootSound.tempo(30)){
         tone(SPK, 1200, 20);
-        soundShootState++;
+        soundShoot.state++;
       } 
       break;  
     case 4: 
-      if(musga_tiro.tempo(25) ){
+      if(timer.shootSound.tempo(25) ){
         tone(SPK, 900, 15);
-        soundShootState = 1;
-        soundShoot = false;
+        soundShoot.reset();
+        soundShoot.canPlay = false;
       }
       break;
     }
   }
   }
 
-void musga_explosao_com() {
-  if(soundExplosionState) {
-    switch(soundExplosion){
+void sound_explosion() {
+  if(explosionSound.canPlay) {
+    switch(explosionSound.state){
       case 1:
       tone(SPK, 850, 30);
-      soundExplosion++;
+      explosionSound.state++;
       break;
 
       case 2:
-      if(musga_boom.tempo(35)) {
+      if(timer.explosionSound.tempo(35)) {
       tone(SPK, 600, 40);
-      soundExplosion++;
+      explosionSound.state++;
       } 
       break;
 
       case 3:
-      if(musga_boom.tempo(45)) {
+      if(timer.explosionSound.tempo(45)) {
       tone(SPK, 750, 30);
-      soundExplosion++;
+      explosionSound.state++;
       } 
       break;
 
       case 4:
-      if(musga_boom.tempo(35)) {
+      if(timer.explosionSound.tempo(35)) {
       tone(SPK, 450, 30);
-      soundExplosion++;
+      explosionSound.state++;
       } 
       break;      
 
       case 5:
-      if(musga_boom.tempo(75)) {
+      if(timer.explosionSound.tempo(75)) {
       tone(SPK, 250, 120);
-      soundExplosion=1;
-      soundExplosionState = false;
+      explosionSound.reset();
+      explosionSound.canPlay = false;
       } 
       break;        
     }
