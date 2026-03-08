@@ -12,15 +12,15 @@
 #define DEADZONE 250
 #define SPK 14
 #define LEN_ANIMATION_BE 10
-#define LIMIT_Y 56
-#define TAM_OBJ 8
-#define TAM_OBJG 16
+#define LIMIT_Y 55
+#define SPAWNXY 500
 
 const byte fase1_qntC=5, fase1_vmin=2, fase1_vmax=4;
 const int centroX = 1730, centroY = 1772;
 
 struct Comet{
-  int x=500,y=500,hp,vel;
+  int x=SPAWNXY,y=SPAWNXY,hp,vel;
+	byte size;
 
   void defineHp(int life){
     hp = life;
@@ -106,6 +106,7 @@ Shoot shoot[MAX_TIROS];
 Timers timer;
 Comet smallComet[MAX_COM];
 Comet bigComet[MAX_COM];
+
 Btn butao(BTN);
 
 
