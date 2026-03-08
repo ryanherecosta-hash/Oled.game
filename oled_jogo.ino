@@ -1,26 +1,14 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <coisasQueQueroEsconder.h>
-// teste notebook 
+#include <consts&bitmaps.h>
+#include <objects.h>
 
-byte fase = 1,energy = 100;
-byte qntComet8=0, velMin=2, velMax=2; // C = cometa
-byte qntComet16=3, velMin16=2, velMax16=2; // G = cometa grande
+byte fase = 1,energy = 100,
+totalHP =3, qntLoop=0, frame=0;
 
-int bateryX = 200, bateryY;
-int points = 0,totalHP =3, shoots=30;
-int naveX = 50, naveY=20, qntLoop=0;
-int frame=0; 
-
-bool energyOnOff=false;
+int points = 0, shoots=30;
 bool animationOnOff = true;
-
-struct powerUp{ // sem funçao real ainda
-  int x,y;
-  bool canSpawn = false;
-
-  };
 
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -32,14 +20,12 @@ int spawnX() {
   return random(MIN_COM_RESP, MAX_COM_RESP); 
   }
 
-
-
 int filtrarADC(int pin) {
   int soma = 0;
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < 10; i++) {
     soma += analogRead(pin);
   }
-  int media = soma / 20; 
+  int media = soma / 10; 
   return media;
   }
 
@@ -70,18 +56,36 @@ void mostraNave(){
   if(abs(leituraX) < DEADZONE) leituraX = 0;
   if(abs(leituraY) < DEADZONE) leituraY = 0;
 
-  naveX -= leituraX / 800;
-  naveY += leituraY / 800;
+  nave1.x -= leituraX / 800;
+  nave1.y += leituraY / 800;
 
-  if(naveX > 100)naveX = 100;
-  if(naveX < -4) naveX = -4;
-  if(naveY < -4) naveY = -4;
-  if(naveY > 48) naveY = 48;
+  if(nave1.x > 100)nave1.x = 100;
+  if(nave1.x < -4) nave1.x = -4;
+  if(nave1.y < -4) nave1.y = -4;
+  if(nave1.y > 48) nave1.y = 48;
   
-  oled.drawBitmap(naveX, naveY, nave, 8, 8, SSD1306_WHITE);
+  oled.drawBitmap(nave1.x, nave1.y, nave, 8, 8, SSD1306_WHITE);
   }
+
+
+void disparo(){
+  if (butao.press() && shoots > 0){
+    sound.shoot.canPlay = true;
+    timer.shootSound.reset();
+    for(int a =0;a<MAX_TIROS;a++){
+      if (!shoot[a].hasShoot){
+        shoot[a].x = nave1.x + 6;
+        shoot[a].y = nave1.y;
+        shoot[a].hasShoot = true;
+        shoots-=1;
+        break;
+       }
+      }
+    }
+  }
+
 struct cometGenerate {
-  void comets(byte qtdCom, byte velMin, byte velMax, Comet comets[MAX_COM]){
+  void comets(byte qtdCom, byte velMin, byte velMax, Comet comets[]){
     for (int i = 0; i < qtdCom; i++) {
     if (comets[i].x == SPAWNXY && comets[i].y == SPAWNXY){
     comets[i].x = spawnX();
@@ -102,104 +106,112 @@ struct cometGenerate {
   }
   }
   };
-cometGenerate sCometGer;
-cometGenerate bCometGer;
+cometGenerate cometManager;
 
-
-void disparo(){
-  if (butao.press() && shoots > 0){
-    soundShoot.canPlay = true;
-    timer.shootSound.reset();
-    for(int a =0;a<MAX_TIROS;a++){
-      if (!shoot[a].hasShoot){
-        shoot[a].x = naveX + 6;
-        shoot[a].y = naveY;
-        shoot[a].hasShoot = true;
-        shoots-=1;
-        break;
-       }
+struct PowerUpManager {
+  void spawn(Itens &powerUp, byte spawnrate){
+    if (timer.global.tempo(1000)) {
+      if (!powerUp.hasSpawned && random(0, 100) > 100 - spawnrate) {
+      powerUp.y = spawnY(8);
+      powerUp.x = 128; 
+      powerUp.hasSpawned = true;
+    }
+    }
+  }
+  void generate(Itens &powerUp, const uint8_t* bitmap){
+    if (powerUp.hasSpawned) {
+    oled.drawBitmap(powerUp.x, powerUp.y, bitmap, 8, 8, SSD1306_WHITE);
+      
+    powerUp.x -= powerUp.vel;
+    if (powerUp.x <= -8) {
+      powerUp.hasSpawned = false;
+      powerUp.x = 200;
       }
     }
   }
+	};
+PowerUpManager powerUp;
 
 void colisao(){
-  // colisao cometas
   for(int i=0;i<MAX_TIROS;i++){
     if(shoot[i].hasShoot){
 
-      for(int a=0;a<qntComet8;a++){
-        if((shoot[i].x +8 >= smallComet[a].x && shoot[i].x < smallComet[a].x +8)
-         && ((shoot[i].y < smallComet[a].y +8) && (shoot[i].y +8 > smallComet[a].y)) ){ // funciona e o + é pra deixar mais ez
+      for(int a=0;a<cond.smallC.qntCom;a++){
+        if((shoot[i].x +8 >= comet.small[a].x && shoot[i].x < comet.small[a].x +8)
+         && ((shoot[i].y < comet.small[a].y +8) && (shoot[i].y +8 > comet.small[a].y)) ){ // funciona e o + é pra deixar mais ez
           shoot[i].hasShoot = false;
-          smallComet[a].hp--;
-          if(smallComet[a].hp <= 0){ //inutil mas legal se crescer
-            oled.drawBitmap(smallComet[a].x, smallComet[a].y, explosao, 8, 8, SSD1306_WHITE);
-            smallComet[a].x = spawnX();
-            smallComet[a].y = spawnY(smallComet[a].size);
-            points += random(40, 60);
-            explosionSound.canPlay = true;
+          comet.small[a].hp--;
+          if(comet.small[a].hp <= 0){ //inutil mas legal se crescer
+            oled.drawBitmap(comet.small[a].x, comet.small[a].y, explosao, 8, 8, SSD1306_WHITE);
+            comet.small[a].x = spawnX();
+            comet.small[a].y = spawnY(comet.small[a].size);
+            points += random(35, 55);
+            sound.explosion.canPlay = true;
             timer.explosionSound.reset();
-            smallComet[a].hp = 1;
+            comet.small[a].hp = 1;
           }
           break;
         }
       }
-      for(int a=0;a<qntComet16;a++){
-        if((shoot[i].x +8 >= bigComet[a].x && shoot[i].x < bigComet[a].x +16)
-         && ((shoot[i].y < bigComet[a].y +16) && (shoot[i].y +8 > bigComet[a].y )) ){ // funciona e o + é pra deixar mais ez
+      for(int a=0;a<cond.bigC.qntCom;a++){
+        if((shoot[i].x +8 >= comet.big[a].x && shoot[i].x < comet.big[a].x +16)
+         && ((shoot[i].y < comet.big[a].y +16) && (shoot[i].y +8 > comet.big[a].y )) ){ // funciona e o + é pra deixar mais ez
           shoot[i].hasShoot = false;
-          bigComet[a].hp--;
-          if(bigComet[a].hp <= 0){
-            oled.drawBitmap(bigComet[a].x, bigComet[a].y, explosaoG, 16,16, SSD1306_WHITE);
-            bigComet[a].x = spawnX();
-            bigComet[a].y = spawnY(bigComet[a].size);
-            points += random(40, 181);
-            explosionSound.canPlay = true;
+          comet.big[a].hp--;
+          if(comet.big[a].hp <= 0){
+            oled.drawBitmap(comet.big[a].x, comet.big[a].y, explosaoG, 16,16, SSD1306_WHITE);
+            comet.big[a].x = spawnX();
+            comet.big[a].y = spawnY(comet.big[a].size);
+            points += random(35, 130);
+            sound.explosion.canPlay = true;
             timer.explosionSound.reset();
-            bigComet[a].hp = 3;
+            comet.big[a].hp = 3;
           }
           break;
       }
     }
   }
   } // colisao nave
-  for (int c=0;c<qntComet8;c++){
-    if((naveX+7 >= smallComet[c].x && naveX <= smallComet[c].x +8) && (smallComet[c].y +7 >= naveY && smallComet[c].y <= naveY+7)){
+  for (int c=0;c<cond.smallC.qntCom;c++){
+    if((nave1.x+7 >= comet.small[c].x && nave1.x <= comet.small[c].x +8) &&
+     (comet.small[c].y +7 >= nave1.y && comet.small[c].y <= nave1.y+7)){
       totalHP--;
-      smallComet[c].hp--;
-      smallComet[c].x = spawnX();
-      smallComet[c].y = spawnY(smallComet[c].size);
+      comet.small[c].hp--;
+      comet.small[c].x = spawnX();
+      comet.small[c].y = spawnY(comet.small[c].size);
       break;
     }
   }
-  for (int c=0;c<qntComet16;c++){
-    if((naveX+7 >= bigComet[c].x && naveX <= bigComet[c].x +15) && (bigComet[c].y +15 >= naveY && bigComet[c].y <= naveY+7)) {
+  for (int c=0;c<cond.bigC.qntCom;c++){
+    if((nave1.x+7 >= comet.big[c].x && nave1.x <= comet.big[c].x +15) 
+    && (comet.big[c].y +15 >= nave1.y && comet.big[c].y <= nave1.y+7)) {
       totalHP--;
-      bigComet[c].hp--;
-      bigComet[c].x = spawnX();
-      bigComet[c].y = spawnY(bigComet[c].size);
+      comet.big[c].hp--;
+      comet.big[c].x = spawnX();
+      comet.big[c].y = spawnY(comet.big[c].size);
       break;
     }
   }
   
    // colisao energia 
-  if(energyOnOff && (bateryX <= naveX+8 && bateryX >= naveX) && (bateryY+8 >= naveY  &&  bateryY <= naveY +8) ){
-    energyOnOff = false;
-    bateryX = 200;
+  if(itens.energy.hasSpawned && (itens.energy.x <= nave1.x+8 && itens.energy.x >= nave1.x) &&
+   (itens.energy.y+8 >= nave1.y  &&  itens.energy.y <= nave1.y +8) ){
+    itens.energy.hasSpawned = false;
+    itens.energy.x = 200;
     energy = 100;
   }
   }
 
 void renderCometa(){
 
-  for(int i=0; i<qntComet8;i++){
-  oled.drawBitmap(smallComet[i].x, smallComet[i].y, cometa, 8, 8, SSD1306_WHITE);
+  for(int i=0; i<cond.smallC.qntCom;i++){
+  oled.drawBitmap(comet.small[i].x, comet.small[i].y, cometa, 8, 8, SSD1306_WHITE);
   }
 
-  for(int i=0; i<qntComet16;i++){
-    if(bigComet[i].hp >= 3) oled.drawBitmap(bigComet[i].x, bigComet[i].y, cometaG0, 16, 16, SSD1306_WHITE);
-    else if(bigComet[i].hp == 2) oled.drawBitmap(bigComet[i].x, bigComet[i].y, cometaG1, 16, 16, SSD1306_WHITE);
-    else if(bigComet[i].hp <= 1) oled.drawBitmap(bigComet[i].x, bigComet[i].y, cometaG2, 16, 16, SSD1306_WHITE);
+  for(int i=0; i<cond.bigC.qntCom;i++){
+    if(comet.big[i].hp >= 3) oled.drawBitmap(comet.big[i].x, comet.big[i].y, cometaG0, 16, 16, SSD1306_WHITE);
+    else if(comet.big[i].hp == 2) oled.drawBitmap(comet.big[i].x, comet.big[i].y, cometaG1, 16, 16, SSD1306_WHITE);
+    else if(comet.big[i].hp <= 1) oled.drawBitmap(comet.big[i].x, comet.big[i].y, cometaG2, 16, 16, SSD1306_WHITE);
   }
 
   }
@@ -266,95 +278,80 @@ void perdasTotais(){
     if(timer.ammo.tempo(1500)) shoots++;
  }
 
-void spawn_energia() {
-  if(timer.global.tempo(1000) ) {
-    int spawnrateEne = random(0, 100);
-    if (spawnrateEne >= 87){ // 13% spawnrate / s
-      if(!energyOnOff){
-        bateryY = spawnY(8);
-        }
-      energyOnOff = true;
-      }
-    }
+void powerUps() {
+  powerUp.spawn(itens.energy, 15);
+  powerUp.generate(itens.energy, bateria);
 
-  if(energyOnOff){
-    oled.drawBitmap(bateryX, bateryY, bateria,8,8, SSD1306_WHITE);
-    bateryX-= velMin16;
-    if(bateryX <= -8){
-      energyOnOff = false;
-      bateryX = 200;
-    }
-  }
- }
+}
 
 void fases_cond(){
   if(fase == 1){
-    qntComet8=0; velMin=2; velMax=2;
-    qntComet16=3; velMin16=2; velMax16=2; // G = cometa grande
+    cond.smallC.qntCom=0; cond.smallC.velMin=2; cond.smallC.velMax=2;
+    cond.bigC.qntCom=3; cond.bigC.velMin=2; cond.bigC.velMax=2; // G = cometa grande
   }
-  if(fase == 1 && points >= 500){
+  if(fase == 1 && points >= 700){
     fase++;
 
-    velMax16++; // 3>4
+    cond.bigC.qntCom++;
     subirFase();
     mensagem_subirFase("FASE 2:", "+ vel max  com grande", "", "", "");
    }
-  else if(fase == 2 && points >= 1000){
+  else if(fase == 2 && points >= 1500){
     fase++;
 
-    qntComet8+=3; // 0>3
+    cond.smallC.qntCom+=3; 
     subirFase();
     mensagem_subirFase("FASE 3:", "+3 com pequenos", "", "", "");
    }
-  else if(fase == 3 && points >= 1500){
+  else if(fase == 3 && points >= 2500){
     fase++;
-    qntComet8++; //3>4
-    velMax++; //2>3
-    qntComet16--; //3>2
+    cond.smallC.qntCom++; 
+    cond.smallC.velMax++; 
+    cond.bigC.qntCom--; 
     subirFase();
     mensagem_subirFase("FASE 4:", "+ com pequeno", "+ vel com pequeno", "- com grande", "");
   }
-  else if(fase == 4 && points >= 2000){
+  else if(fase == 4 && points >= 3500){
     fase++;
-    qntComet8+=2; // 4>6
-    velMin++; //2>3
-    qntComet16-=2; //2>0
+    cond.smallC.qntCom+=2; 
+    cond.bigC.qntCom-=2; 
     subirFase();
     mensagem_subirFase("FASE 5:", "+2 com pequeno", "+ vel min com pequeno", "- com grande", "");
   }
-  else if(fase == 5 && points >= 2800){
+  else if(fase == 5 && points >= 4500){
     fase++;
-    qntComet8+=2; //6>8
+    cond.smallC.qntCom+=2; 
+    cond.bigC.qntCom--;
     subirFase();
     mensagem_subirFase("FASE 6:", "+2 com pequeno", "", "", "");
 
   }
-    else if(fase == 6 && points >= 3700){
+    else if(fase == 6 && points >= 6000){
     fase++;
-    qntComet8+=3; //8>10
+    cond.smallC.qntCom+=3; 
     subirFase();
     mensagem_subirFase("FASE 7:", "+3 com pequeno", "", "", "");
   }
-    else if(fase == 7 && points >= 4700){
+    else if(fase == 7 && points >= 7000){
     fase++;
-    qntComet16++; //0>1
-    velMax16++; //3>4
+    cond.bigC.qntCom++; 
+    cond.bigC.velMax++; 
     subirFase();
     mensagem_subirFase("FASE 8:", "+ com grande", "+ vel max com grande", "", "");
   }
-    else if(fase == 8 && points >= 6000){
+    else if(fase == 8 && points >= 8000){
     fase++;
-    qntComet16++; //0>2
-    qntComet8+=2; //11>13
+    cond.bigC.qntCom++; 
+    cond.smallC.qntCom+=2; 
     subirFase();
     mensagem_subirFase("FASE 9:", "+2 com pequeno", "+ com grande", "", "");
   }
-    else if(fase == 9 && points >= 7777){
+    else if(fase == 9 && points >= 9000){
     fase=67;
-    qntComet16++; //2>3
-    velMin16++; //2>3
-    qntComet8+=5; //13>18
-    velMax++; // 3>4
+    cond.bigC.qntCom+=2;
+    cond.bigC.velMin++; 
+    cond.smallC.qntCom+=5; 
+    cond.smallC.velMax++;
     subirFase();
     mensagem_subirFase("FASE 67:", "+5 com pequeno", "+ vel max com pequeno", "+ com grande", "+ vel min com grande");
 
@@ -364,25 +361,25 @@ void fases_cond(){
 
 void subirFase() {
   timer.global.reset();
-  bateryX = 128; // bom ne
-  bateryY = spawnY(8);
-  energyOnOff = false;
+  itens.energy.x = 128; 
+  itens.energy.y = spawnY(8);
+  itens.energy.hasSpawned = false;
   energy += 30;
   shoots += random(0, 20);
 
-  if(qntComet8 > MAX_COM) qntComet8 = MAX_COM;
-  if(qntComet16 > MAX_COM) qntComet16 = MAX_COM;
+  if(cond.smallC.qntCom > MAX_COM) cond.smallC.qntCom = MAX_COM;
+  if(cond.bigC.qntCom > MAX_COM) cond.bigC.qntCom = MAX_COM;
 
 
-  for (int i = 0; i < qntComet8; i++) {
-    smallComet[i].x = spawnX();
-    smallComet[i].y = spawnY(smallComet[i].size);
-    smallComet[i].vel  = random(velMin, velMax +1);
+  for (int i = 0; i < cond.smallC.qntCom; i++) {
+    comet.small[i].x = spawnX();
+    comet.small[i].y = spawnY(comet.small[i].size);
+    comet.small[i].vel  = random(cond.smallC.velMin, cond.smallC.velMax +1);
   }
-  for (int i = 0; i < qntComet16; i++) {
-    bigComet[i].x = spawnX();
-    bigComet[i].y = spawnY(bigComet[i].size);
-    bigComet[i].vel  = random(velMin16, velMax16 +1);
+  for (int i = 0; i < cond.bigC.qntCom; i++) {
+    comet.big[i].x = spawnX();
+    comet.big[i].y = spawnY(comet.big[i].size);
+    comet.big[i].vel  = random(cond.bigC.velMin, cond.bigC.velMax +1);
   }
 
  }
@@ -437,44 +434,41 @@ void mostrar_pontucao(){
   totalHP=3;
   fase = 1;
   points = 0;
-  qntComet8 = fase1_qntC;
-  velMin = fase1_vmin;
-  velMax = fase1_vmax;
   frame=0;
   shoots = 30;
   energy = 100;
 
   for(int i=0;i<MAX_COM;i++){
-  smallComet[i].x = smallComet[i].y = 500;
-  bigComet[i].x = bigComet[i].y = 500;
+  comet.small[i].x = comet.small[i].y = 500;
+  comet.big[i].x = comet.big[i].y = 500;
   }
   oled.setTextSize(1);
   }
 
 void sound_shoot(){
-  if(soundShoot.canPlay){
-    switch (soundShoot.state) {
+  if(sound.shoot.canPlay){
+    switch (sound.shoot.state) {
     case 1:
       tone(SPK, 1800, 30);
-      soundShoot.state++;
+      sound.shoot.state++;
       break;
     case 2:
       if(timer.shootSound.tempo(35)){
         tone(SPK, 1500, 25);
-        soundShoot.state++;
+        sound.shoot.state++;
       } 
       break;
     case 3:
       if(timer.shootSound.tempo(30)){
         tone(SPK, 1200, 20);
-        soundShoot.state++;
+        sound.shoot.state++;
       } 
       break;  
     case 4: 
       if(timer.shootSound.tempo(25) ){
         tone(SPK, 900, 15);
-        soundShoot.reset();
-        soundShoot.canPlay = false;
+        sound.shoot.reset();
+        sound.shoot.canPlay = false;
       }
       break;
     }
@@ -482,39 +476,39 @@ void sound_shoot(){
   }
 
 void sound_explosion() {
-  if(explosionSound.canPlay) {
-    switch(explosionSound.state){
+  if(sound.explosion.canPlay) {
+    switch(sound.explosion.state){
       case 1:
       tone(SPK, 850, 30);
-      explosionSound.state++;
+      sound.explosion.state++;
       break;
 
       case 2:
       if(timer.explosionSound.tempo(35)) {
       tone(SPK, 600, 40);
-      explosionSound.state++;
+      sound.explosion.state++;
       } 
       break;
 
       case 3:
       if(timer.explosionSound.tempo(45)) {
       tone(SPK, 750, 30);
-      explosionSound.state++;
+      sound.explosion.state++;
       } 
       break;
 
       case 4:
       if(timer.explosionSound.tempo(35)) {
       tone(SPK, 450, 30);
-      explosionSound.state++;
+      sound.explosion.state++;
       } 
       break;      
 
       case 5:
       if(timer.explosionSound.tempo(75)) {
       tone(SPK, 250, 120);
-      explosionSound.reset();
-      explosionSound.canPlay = false;
+      sound.explosion.reset();
+      sound.explosion.canPlay = false;
       } 
       break;        
     }
@@ -534,7 +528,7 @@ void mensagem_subirFase(String mensagem, String m1, String m2, String m3, String
   oled.display();
   delay(300); // mata ninguem
   while(!(butao.press()) );
-}
+  }
 
 void setup() {
   Serial.begin(115200);
@@ -544,10 +538,10 @@ void setup() {
   pinMode(SPK, OUTPUT);
 
   for(int x=0;x<MAX_COM;x++){
-    bigComet[x].defineHp(3);
-    bigComet[x].size = 16;
-    smallComet[x].defineHp(1);
-    smallComet[x].size = 8;
+    comet.big[x].defineHp(3);
+    comet.big[x].size = 16;
+    comet.small[x].defineHp(1);
+    comet.small[x].size = 8;
   }
 
   if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
@@ -566,7 +560,7 @@ void setup() {
   delay(4000);
   randomSeed(analogRead(0)); 
   comeco();
-}
+  }
 
 void loop() {
   oled.clearDisplay();
@@ -574,9 +568,9 @@ void loop() {
   fases_cond();
   disparo();
   sound_shoot();
-  sCometGer.comets(qntComet8, velMin, velMax, smallComet);
-  bCometGer.comets(qntComet16, velMin16, velMax16, bigComet);
-  spawn_energia();
+  cometManager.comets(cond.smallC.qntCom, cond.smallC.velMin, cond.smallC.velMax, comet.small);
+  cometManager.comets(cond.bigC.qntCom, cond.bigC.velMin, cond.bigC.velMax, comet.big);
+  powerUps();
   colisao();
   sound_explosion();
   renderCometa();
