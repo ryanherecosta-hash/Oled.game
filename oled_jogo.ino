@@ -2,6 +2,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <coisasQueQueroEsconder.h>
+// teste notebook 
 
 byte fase = 1,energy = 100;
 byte qntComet8=0, velMin=2, velMax=2; // C = cometa
