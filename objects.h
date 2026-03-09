@@ -62,6 +62,8 @@ struct Timers{
 	Timer animation;
 	Timer cooldawn;
 	Timer ammo;
+	Timer spawnAmmo;
+	Timer spawnEnergy;	
 	};
 	Timers timer;
 
@@ -81,20 +83,14 @@ struct Sound{
 	};
 
 struct Itens{ // sem funçao real ainda
-  int x,y,vel=3;
+  int x,y,vel=2;
   bool hasSpawned = false, isOn = false;
-
-	bool spawn(byte spawnrate){
-	byte rng = random(0, 100);
-    if (rng >= 100 - spawnrate){return true;}
-		else {return false;}
-	}
-
 	};
 
 struct OrgItens {
 	Itens energy;
 	Itens hp;
+	Itens ammo;
 	};
 
 struct Sounds{

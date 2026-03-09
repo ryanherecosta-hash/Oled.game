@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <consts&bitmaps.h>
+#include <consts_bitmaps.h>
 #include <objects.h>
 
 byte fase = 1,energy = 100,
@@ -110,12 +110,10 @@ cometGenerate cometManager;
 
 struct PowerUpManager {
   void spawn(Itens &powerUp, byte spawnrate){
-    if (timer.global.tempo(1000)) {
       if (!powerUp.hasSpawned && random(0, 100) > 100 - spawnrate) {
       powerUp.y = spawnY(8);
       powerUp.x = 128; 
       powerUp.hasSpawned = true;
-    }
     }
   }
   void generate(Itens &powerUp, const uint8_t* bitmap){
@@ -199,6 +197,13 @@ void colisao(){
     itens.energy.hasSpawned = false;
     itens.energy.x = 200;
     energy = 100;
+   }
+  // colisao ammo
+  if(itens.ammo.hasSpawned && (itens.ammo.x <= nave1.x+8 && itens.ammo.x >= nave1.x) &&
+   (itens.ammo.y+8 >= nave1.y  &&  itens.ammo.y <= nave1.y +8) ){
+    itens.ammo.hasSpawned = false;
+    itens.ammo.x = 200;
+    shoots += 20;
   }
   }
 
@@ -229,9 +234,9 @@ void renderTiro(){
     }
 
 
-void gprint(byte x, byte y, int random){
+void gprint(byte x, byte y, int rng){
   oled.setCursor(x, y);
-  oled.print(random);
+  oled.print(rng);
   }
  
 
@@ -243,7 +248,7 @@ void painel(){
   gprint(26,57,int(energy));
   oled.drawBitmap(41, 57, pontos, 8, 8, SSD1306_WHITE); 
   gprint(48,57,points);
-  oled.drawBitmap(80, 57, cometa_display, 8,8, SSD1306_WHITE);
+  oled.drawBitmap(80, 57, ammoBitmap, 8,8, SSD1306_WHITE);
   gprint(88,57,shoots); // testes
   oled.drawBitmap(102, 57, sp_i, 16,16, SSD1306_WHITE);
   gprint(114,57,fase);
@@ -279,8 +284,10 @@ void perdasTotais(){
  }
 
 void powerUps() {
-  powerUp.spawn(itens.energy, 15);
+  if(timer.spawnEnergy.tempo(1000)) powerUp.spawn(itens.energy, 15);
   powerUp.generate(itens.energy, bateria);
+  if(timer.spawnAmmo.tempo(1000)) powerUp.spawn(itens.ammo, 15);
+  powerUp.generate(itens.ammo, ammoBitmap);
 
 }
 
@@ -551,13 +558,6 @@ void setup() {
   oled.clearDisplay();
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
-  oled.println("Codigo feito por: ");
-  oled.println("Ryan Acosta Heredia");
-  oled.println("2 ano ETEHL");
-  oled.println("ultima att feita em:");
-  oled.println("24/02/26 00:15 ");
-  oled.display();
-  delay(4000);
   randomSeed(analogRead(0)); 
   comeco();
   }

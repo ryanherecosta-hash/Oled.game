@@ -1072,4 +1072,17 @@ static const unsigned char PROGMEM explosaoG[] = {
 	0b10000010, 0b00100110, 
 	0b11000001, 0b01000001,
 	};
+
+
+static const unsigned char PROGMEM ammoBitmap[] = {
+	0b00011000, 
+	0b00011000, 
+	0b00111100, 
+	0b00111100, 
+	0b00111100, 
+	0b00111100, 
+	0b00111100, 
+	0b01111110, 
+	0b01111110,
+	};
 //fim
