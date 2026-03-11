@@ -83,7 +83,7 @@ struct Sound{
 	};
 
 struct Itens{ // sem funçao real ainda
-  int x,y,vel=2;
+  int x,y,vel=2,spawnrate;
   bool hasSpawned = false, isOn = false;
 	};
 
@@ -105,8 +105,8 @@ struct Comets{
 
 struct CStats {
   byte qntCom, velMin, velMax;
-  CStats(byte qntCom, byte vmin, byte vmax){
-    qntCom = qntCom;
+  CStats(byte qntcom, byte vmin, byte vmax){
+    qntCom = qntcom;
     velMin = vmin;
     velMax = vmax;
   }

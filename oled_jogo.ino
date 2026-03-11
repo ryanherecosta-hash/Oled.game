@@ -4,7 +4,7 @@
 #include <consts_bitmaps.h>
 #include <objects.h>
 
-byte fase = 1,energy = 100,
+int fase = 1,energy = 100,
 totalHP =3, qntLoop=0, frame=0;
 
 int points = 0, shoots=30;
@@ -84,8 +84,7 @@ void disparo(){
     }
   }
 
-struct cometGenerate {
-  void comets(byte qtdCom, byte velMin, byte velMax, Comet comets[]){
+void comets(byte qtdCom, byte velMin, byte velMax, Comet comets[]){
     for (int i = 0; i < qtdCom; i++) {
     if (comets[i].x == SPAWNXY && comets[i].y == SPAWNXY){
     comets[i].x = spawnX();
@@ -105,106 +104,87 @@ struct cometGenerate {
     } 
   }
   }
-  };
-cometGenerate cometManager;
-
-struct PowerUpManager {
-  void spawn(Itens &powerUp, byte spawnrate){
+  
+void spawn(Itens &powerUp, byte spawnrate){
       if (!powerUp.hasSpawned && random(0, 100) > 100 - spawnrate) {
       powerUp.y = spawnY(8);
       powerUp.x = 128; 
       powerUp.hasSpawned = true;
     }
   }
-  void generate(Itens &powerUp, const uint8_t* bitmap){
-    if (powerUp.hasSpawned) {
-    oled.drawBitmap(powerUp.x, powerUp.y, bitmap, 8, 8, SSD1306_WHITE);
-      
+void generate(Itens &powerUp){
+    if (powerUp.hasSpawned) {  
     powerUp.x -= powerUp.vel;
     if (powerUp.x <= -8) {
       powerUp.hasSpawned = false;
       powerUp.x = 200;
       }
     }
+}
+  void render(Itens &powerUp, const uint8_t* bitmap){
+    if (powerUp.hasSpawned) {
+    oled.drawBitmap(powerUp.x, powerUp.y, bitmap, 8, 8, SSD1306_WHITE);
+    }
   }
-	};
-PowerUpManager powerUp;
 
-void colisao(){
-  for(int i=0;i<MAX_TIROS;i++){
+void colisaoComet(CStats &ct, Comet c[], byte tam, const uint8_t* bitmap, byte hp){
+    for(int i=0;i<MAX_TIROS;i++){
     if(shoot[i].hasShoot){
 
-      for(int a=0;a<cond.smallC.qntCom;a++){
-        if((shoot[i].x +8 >= comet.small[a].x && shoot[i].x < comet.small[a].x +8)
-         && ((shoot[i].y < comet.small[a].y +8) && (shoot[i].y +8 > comet.small[a].y)) ){ // funciona e o + é pra deixar mais ez
+      for(int a=0;a<ct.qntCom;a++){
+        if((shoot[i].x +8 >= c[a].x && shoot[i].x < c[a].x +tam)
+         && ((shoot[i].y < c[a].y +tam) && (shoot[i].y +8 > c[a].y)) ){ // funciona e o + é pra deixar mais ez
           shoot[i].hasShoot = false;
-          comet.small[a].hp--;
-          if(comet.small[a].hp <= 0){ //inutil mas legal se crescer
-            oled.drawBitmap(comet.small[a].x, comet.small[a].y, explosao, 8, 8, SSD1306_WHITE);
-            comet.small[a].x = spawnX();
-            comet.small[a].y = spawnY(comet.small[a].size);
+          c[a].hp--;
+          if(c[a].hp <= 0){
+            oled.drawBitmap(c[a].x, c[a].y, bitmap, tam, tam, SSD1306_WHITE);
+            c[a].x = spawnX();
+            c[a].y = spawnY(c[a].size);
             points += random(35, 55);
             sound.explosion.canPlay = true;
             timer.explosionSound.reset();
-            comet.small[a].hp = 1;
+            c[a].hp = hp;
           }
           break;
         }
       }
-      for(int a=0;a<cond.bigC.qntCom;a++){
-        if((shoot[i].x +8 >= comet.big[a].x && shoot[i].x < comet.big[a].x +16)
-         && ((shoot[i].y < comet.big[a].y +16) && (shoot[i].y +8 > comet.big[a].y )) ){ // funciona e o + é pra deixar mais ez
-          shoot[i].hasShoot = false;
-          comet.big[a].hp--;
-          if(comet.big[a].hp <= 0){
-            oled.drawBitmap(comet.big[a].x, comet.big[a].y, explosaoG, 16,16, SSD1306_WHITE);
-            comet.big[a].x = spawnX();
-            comet.big[a].y = spawnY(comet.big[a].size);
-            points += random(35, 130);
-            sound.explosion.canPlay = true;
-            timer.explosionSound.reset();
-            comet.big[a].hp = 3;
-          }
-          break;
       }
     }
-  }
-  } // colisao nave
-  for (int c=0;c<cond.smallC.qntCom;c++){
-    if((nave1.x+7 >= comet.small[c].x && nave1.x <= comet.small[c].x +8) &&
-     (comet.small[c].y +7 >= nave1.y && comet.small[c].y <= nave1.y+7)){
+    }
+
+void colisaoNave(CStats &cs, Comet c[], byte tam){
+  for (int i=0;i<cs.qntCom;i++){
+    if((nave1.x+7 >= c[i].x && nave1.x <= c[i].x +tam) &&
+     (c[i].y +tam-1 >= nave1.y && c[i].y <= nave1.y+7)){
       totalHP--;
-      comet.small[c].hp--;
-      comet.small[c].x = spawnX();
-      comet.small[c].y = spawnY(comet.small[c].size);
+      c[i].hp--;
+      c[i].x = spawnX();
+      c[i].y = spawnY(c[i].size);
       break;
     }
   }
-  for (int c=0;c<cond.bigC.qntCom;c++){
-    if((nave1.x+7 >= comet.big[c].x && nave1.x <= comet.big[c].x +15) 
-    && (comet.big[c].y +15 >= nave1.y && comet.big[c].y <= nave1.y+7)) {
-      totalHP--;
-      comet.big[c].hp--;
-      comet.big[c].x = spawnX();
-      comet.big[c].y = spawnY(comet.big[c].size);
-      break;
-    }
   }
-  
-   // colisao energia 
-  if(itens.energy.hasSpawned && (itens.energy.x <= nave1.x+8 && itens.energy.x >= nave1.x) &&
-   (itens.energy.y+8 >= nave1.y  &&  itens.energy.y <= nave1.y +8) ){
-    itens.energy.hasSpawned = false;
-    itens.energy.x = 200;
-    energy = 100;
+
+void colisaoPowerup(Itens &c, int &boost, int value, bool opc){ //opc 1= energy, else ammo
+  if(c.hasSpawned && (c.x <= nave1.x+8 && c.x >= nave1.x) &&
+   (c.y+8 >= nave1.y  &&  c.y <= nave1.y +8) ){
+    c.hasSpawned = false;
+    c.x = 200;
+    if(opc) boost = value;
+    else boost += value;
    }
-  // colisao ammo
-  if(itens.ammo.hasSpawned && (itens.ammo.x <= nave1.x+8 && itens.ammo.x >= nave1.x) &&
-   (itens.ammo.y+8 >= nave1.y  &&  itens.ammo.y <= nave1.y +8) ){
-    itens.ammo.hasSpawned = false;
-    itens.ammo.x = 200;
-    shoots += 20;
   }
+void colisao(){
+
+  colisaoComet(cond.smallC, comet.small, comet.small[0].size, explosao, 1);
+  colisaoComet(cond.bigC, comet.big, comet.big[0].size, explosaoG, 3);
+
+  colisaoNave(cond.smallC, comet.small, comet.small[0].size);
+  colisaoNave(cond.bigC, comet.big, comet.big[0].size);
+  
+  colisaoPowerup(itens.energy, energy, 100, 1);
+  colisaoPowerup(itens.ammo, shoots, 10, 0);
+
   }
 
 void renderCometa(){
@@ -280,15 +260,20 @@ void final_ruim(){
 
 void perdasTotais(){
     if(timer.energy.tempo(250) ) energy--;
-    if(timer.ammo.tempo(1500)) shoots++;
+    if(timer.ammo.tempo(1500) && fase < 6) shoots++;
  }
 
 void powerUps() {
-  if(timer.spawnEnergy.tempo(1000)) powerUp.spawn(itens.energy, 15);
-  powerUp.generate(itens.energy, bateria);
-  if(timer.spawnAmmo.tempo(1000)) powerUp.spawn(itens.ammo, 15);
-  powerUp.generate(itens.ammo, ammoBitmap);
+  if(timer.spawnEnergy.tempo(1000)) spawn(itens.energy, 10);
+  generate(itens.energy);
+  if(timer.spawnAmmo.tempo(1000)) spawn(itens.ammo, 13);
+  generate(itens.ammo);
 
+}
+
+void renderPower(){
+  render(itens.ammo, ammoBitmap);
+  render(itens.energy, bateria);
 }
 
 void fases_cond(){
@@ -337,7 +322,7 @@ void fases_cond(){
     fase++;
     cond.smallC.qntCom+=3; 
     subirFase();
-    mensagem_subirFase("FASE 7:", "+3 com pequeno", "", "", "");
+    mensagem_subirFase("FASE 7:", "+3 com pequeno", "sem recarga", "", "");
   }
     else if(fase == 7 && points >= 7000){
     fase++;
@@ -537,6 +522,26 @@ void mensagem_subirFase(String mensagem, String m1, String m2, String m3, String
   while(!(butao.press()) );
   }
 
+void gameGenerate(){
+  fases_cond();
+  disparo();
+  sound_shoot();
+  comets(cond.smallC.qntCom, cond.smallC.velMin, cond.smallC.velMax, comet.small);
+  comets(cond.bigC.qntCom, cond.bigC.velMin, cond.bigC.velMax, comet.big);
+  powerUps();
+  colisao();
+  sound_explosion();
+  perdasTotais();
+  }
+
+void gameRender(){ 
+  oled.clearDisplay();
+  renderPower();
+  mostraNave();
+  renderCometa();
+  renderTiro();
+  painel();
+  }
 void setup() {
   Serial.begin(115200);
   Wire.begin(22, 21);
@@ -563,20 +568,9 @@ void setup() {
   }
 
 void loop() {
-  oled.clearDisplay();
-  mostraNave();
-  fases_cond();
-  disparo();
-  sound_shoot();
-  cometManager.comets(cond.smallC.qntCom, cond.smallC.velMin, cond.smallC.velMax, comet.small);
-  cometManager.comets(cond.bigC.qntCom, cond.bigC.velMin, cond.bigC.velMax, comet.big);
-  powerUps();
-  colisao();
-  sound_explosion();
-  renderCometa();
-  renderTiro();
-  perdasTotais();
-  painel();
+  gameGenerate();
+  gameRender();
+
   if(totalHP <= 0 || energy <= 0){
     final_ruim();
     mostrar_pontucao();
