@@ -1111,7 +1111,7 @@ static const unsigned char PROGMEM shield[] = {
 	0b10000001, 
 	0b10000001, 
 	0b01000010, 
-	B00100100, 
+	0b00100100, 
 	0b00011000,
 	};
 //fim 

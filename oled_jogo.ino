@@ -9,7 +9,6 @@ totalHP =3, qntLoop=0, frame=0;
 
 int points = 0, shoots=30;
 bool animationOnOff = true;
-itens.shield.timeActive = 3000;
 
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -158,6 +157,7 @@ void colisaoNave(CStats &cs, Comet c[], byte tam){
     if((nave1.x+7 >= c[i].x && nave1.x <= c[i].x +tam) &&
      (c[i].y +tam-1 >= nave1.y && c[i].y <= nave1.y+7)){
       if(itens.shield.isOn == false) totalHP--;
+      points += random(40, 60);
       c[i].hp--;
       c[i].x = spawnX();
       c[i].y = spawnY(c[i].size);
@@ -166,7 +166,7 @@ void colisaoNave(CStats &cs, Comet c[], byte tam){
   }
   }
 
-void colisaoPowerup(Itens &c, int &boost, int value, bool opc){ //opc 1= energy, 2 ammo, 3 shield
+void colisaoPowerup(Itens &c, int &boost, int value, byte opc){ //opc 1= energy, 2 ammo, 3 shield
   if(c.hasSpawned && (c.x <= nave1.x+8 && c.x >= nave1.x) &&
    (c.y+8 >= nave1.y  &&  c.y <= nave1.y +8) ){
     c.hasSpawned = false;
@@ -176,6 +176,7 @@ void colisaoPowerup(Itens &c, int &boost, int value, bool opc){ //opc 1= energy,
     else {
       itens.shield.isOn = true;
       timer.shieldState.reset();
+      itens.shield.blinkState = false;
     } 
    }
   }
@@ -268,13 +269,19 @@ void final_ruim(){
 void perdasTotais(){
     if(timer.energy.tempo(250) ) energy--;
     if(timer.ammo.tempo(1500) && fase < 6) shoots++;
-    if(timer.shieldState.tempo(5000) && itens.shield.isOn = true) itens.shield.isOn = false;
+    if(timer.shieldState.tempo(5000) && itens.shield.isOn) itens.shield.isOn = false;
+
+    itens.shield.timeActive = millis() - timer.shieldState.tempoAnterior;
+    if(itens.shield.isOn && itens.shield.timeActive > 3000) itens.shield.blinkState = true;
+    else itens.shield.blinkState = false;
+    if(itens.shield.blinkState && timer.shieldBlink.tempo(200)) itens.shield.blink = !itens.shield.blink;
+    if(itens.shield.isOn == false) itens.shield.blink = true;
  }
 
 void powerUps() {
-  if(timer.spawnEnergy.tempo(1000)) spawn(itens.energy, 10);
+  if(timer.spawnEnergy.tempo(1000)) spawn(itens.energy, 13);
   generate(itens.energy);
-  if(timer.spawnAmmo.tempo(1000)) spawn(itens.ammo, 13);
+  if(timer.spawnAmmo.tempo(1000)) spawn(itens.ammo, 12);
   generate(itens.ammo);
   if(timer.spawnHp.tempo(1000)) spawn(itens.hp, 5);
   generate(itens.hp);
@@ -286,7 +293,9 @@ void powerUps() {
 void renderPower(){
   render(itens.ammo, ammoBitmap);
   render(itens.energy, bateria);
-  render(itens.hp, vida); 
+  render(itens.hp, vida);
+  render(itens.shield, shield);
+  if(itens.shield.blink && itens.shield.isOn) oled.drawBitmap(nave1.x-4, nave1.y-4, shieldEffect, 16, 16, SSD1306_WHITE);
   }
 
 void fases_cond(){
@@ -549,8 +558,8 @@ void gameGenerate(){
 
 void gameRender(){ 
   oled.clearDisplay();
-  renderPower();
   mostraNave();
+  renderPower();
   renderCometa();
   renderTiro();
   painel();

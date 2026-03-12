@@ -66,7 +66,8 @@ struct Timers{
 	Timer spawnEnergy;
 	Timer spawnHp;
 	Timer spawnShield;
-	Timer shieldState;	
+	Timer shieldState;
+	Timer shieldBlink;
 	};
 	Timers timer;
 
@@ -88,7 +89,7 @@ struct Sound{
 struct Itens{ // sem funçao real ainda
   int x,y,vel=2,spawnrate;
 	unsigned long timeActive;
-  bool hasSpawned = false, isOn = false, blink = true;
+  bool hasSpawned = false, isOn = false, blinkState = false, blink=true;
 	};
 
 struct OrgItens {
