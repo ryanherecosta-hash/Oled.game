@@ -27,6 +27,7 @@ A retro-style arcade game built with **ESP32**, featuring a 0.96" OLED display a
 | **OLED SCL** | GPIO 22 | Clock Line |
 | **Joystick X** | GPIO 33 | Analog Input (Movement) |
 | **Joystick Y** | GPIO 32 | Analog Input (Movement) |
+| **Joystick BTN** | GPIO 25 | Digital Input (Movement) |
 | **Tactile Button**| GPIO 19 | Digital Input (Action) |
 | **Buzzer** | GPIO 14 | PWM Output (Audio) |
 
@@ -39,10 +40,10 @@ I am using the following legend to track progress:
 
 ### **Core Mechanics**
 * ✅ **Collision System:** Solid hitboxes for entities.
-* ⚠️ **Levels/Stages:** Initial level design is functional but expanding.
-* ⚠️ **Animations & SFX:** Basic visual effects and buzzer sounds are being refined.
-* ⚠️ **Limited Ammo:** Resource management system.
-* ❌ **Power-ups:** Special items to boost player stats.
+* ✅ **Levels/Stages:** Initial level design is functional but expanding.
+* ✅ **Animations & SFX:** Basic visual effects and buzzer sounds are being refined.
+* ✅ **Limited Ammo:** Resource management system.
+* ✅ **Power-ups:** Special items to boost player stats.
 
 ### **Combat & Enemies**
 * ❌ **Different Shot Types:** Multiple firing patterns and projectiles.
