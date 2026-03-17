@@ -2,20 +2,20 @@
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 #define OLED_ADDR 0x3C
-#define JX 32 // na verdade é y, dps corijo
-#define JY 33 // na verdade é o x
-#define JBTN 25
-#define BTN 19
+#define JX 3 // na verdade é y, dps corijo
+#define JY 2 // na verdade é o x
+#define JBTN 4
+#define BTN 5
 #define MAX_TIROS 10
 #define MIN_COM_RESP 198
 #define MAX_COM_RESP 456
 #define MAX_COM 22
-#define DEADZONE 250
-#define SPK 14
+#define DEADZONE 300
+#define SPK 20
 #define LEN_ANIMATION_BE 10
 #define LIMIT_Y 55
 #define SPAWNXY 500
-const int centroX = 1730, centroY = 1772;
+const int centroX = 2240, centroY = 2685;
 
 enum gameState{
   MENU,

@@ -80,8 +80,8 @@ void generateNave(){
   if(abs(leituraX) < DEADZONE) leituraX = 0;
   if(abs(leituraY) < DEADZONE) leituraY = 0;
 
-  nave1.x -= leituraX / 600;
-  nave1.y += leituraY / 600;
+  nave1.x -= leituraX / 700;
+  nave1.y += leituraY / 700;
 
   if(nave1.x > 120)nave1.x = 120;
   if(nave1.x < -4) nave1.x = -4;
@@ -170,6 +170,11 @@ void menu(){
   drawButton(x+60,y,67,9,"TUTORIAL",0,1);
   drawButton(x+60,y+20,77,29,"INFO",1,1);
   drawButton(x+60,y+40,72,49,"DEVMOD",2,1);
+
+    Serial.print("X");
+    Serial.println(filtrarADC(JX));
+    Serial.print("Y");
+    Serial.println(filtrarADC(JY));
 
   oled.display();
   } 
@@ -644,7 +649,7 @@ void winLoseCondition(int pts){
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(22, 21);
+  Wire.begin(6,7);
   pinMode(JX, INPUT);
   pinMode(JY, INPUT);
   pinMode(SPK, OUTPUT);
@@ -686,6 +691,7 @@ void loop() {
     oled.display();
     while(!butao.press());
     menu();
+    
   }
   else if(estado == INFO){
     oled.clearDisplay();

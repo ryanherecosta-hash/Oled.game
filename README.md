@@ -10,7 +10,7 @@ A retro-style arcade game built with **ESP32**, featuring a 0.96" OLED display a
 
 ## Components Needed
 
-* **ESP32(or similar) ** (NodeMCU/DevKit)
+* **ESP32C3 mini(or similar) ** (NodeMCU/DevKit)
 * **0.96" OLED I2C** (SSD1306)
 * **Analog Joystick** (X, Y and Switch)
 * **Tactile Button** (Action/Shoot)
@@ -21,15 +21,15 @@ A retro-style arcade game built with **ESP32**, featuring a 0.96" OLED display a
 
 ## 🔌 Pinout Configuration
 
-| Component | ESP32 Pin | Function |
+| Component | ESP32C3 mini Pin | Function |
 | :--- | :--- | :--- |
-| **OLED SDA** | GPIO 21 | Data Line |
-| **OLED SCL** | GPIO 22 | Clock Line |
-| **Joystick X** | GPIO 33 | Analog Input (Movement) |
-| **Joystick Y** | GPIO 32 | Analog Input (Movement) |
-| **Joystick BTN** | GPIO 25 | Digital Input (Movement) |
-| **Tactile Button**| GPIO 19 | Digital Input (Action) |
-| **Buzzer** | GPIO 14 | PWM Output (Audio) |
+| **OLED SDA** | GPIO 6 | Data Line |
+| **OLED SCL** | GPIO 7 | Clock Line |
+| **Joystick X** | GPIO 2 | Analog Input (Movement) |
+| **Joystick Y** | GPIO 3 | Analog Input (Movement) |
+| **Joystick BTN** | GPIO 4 | Digital Input (Movement) |
+| **Tactile Button**| GPIO 5 | Digital Input (Action) |
+| **Buzzer** | GPIO 20 | PWM Output (Audio) |
 
 ---
 
